@@ -1,8 +1,8 @@
 import json
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 
@@ -14,35 +14,64 @@ options.set_capability('sessionName', 'BStack Sample Test')
 driver = webdriver.Chrome(options=options)
 
 try:
-    driver.get('https://bstackdemo.com/')
-    WebDriverWait(driver, 10).until(EC.title_contains('StackDemo'))
-    # Get text of an product - iPhone 12
-    item_on_page = WebDriverWait(driver, 10).until(
-        EC.visibility_of_element_located((By.XPATH, '//*[@id="1"]/p'))).text
-    # Click the 'Add to cart' button if it is visible
-    WebDriverWait(driver, 10).until(EC.visibility_of_element_located(
-        (By.XPATH, '//*[@id="1"]/div[4]'))).click()
-    # Check if the Cart pane is visible
-    WebDriverWait(driver, 10).until(EC.visibility_of_element_located(
-        (By.CLASS_NAME, 'float-cart__content')))
-    # Get text of product in cart
-    item_in_cart = WebDriverWait(driver, 10).until(EC.visibility_of_element_located(
-        (By.XPATH, '//*[@id="__next"]/div/div/div[2]/div[2]/div[2]/div/div[3]/p[1]'))).text
-    # Verify whether the product (iPhone 12) is added to cart
-    if item_on_page == item_in_cart:
-        # Set the status of test as 'passed' if item is added to cart
-        driver.execute_script(
-            'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"passed", "reason": "iPhone 12 has been successfully added to the cart!"}}')
-    else:
-        # Set the status of test as 'failed' if item is not added to cart
-        driver.execute_script(
-            'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed", "reason": "iPhone 12 not added to the cart!"}}')
+    driver.get('https://www.flipkart.com/')
+    
+    # Search for the product "Samsung Galaxy S10"
+    search_input = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.NAME, 'q')))
+    search_input.click()
+    search_input.send_keys('Samsung Galaxy S10')
+    search_input.submit()
+
+    # Click on "Mobiles" in categories
+    mobiles_category = WebDriverWait(driver, 10).until(EC.visibility_of_element_located(
+        (By.XPATH, '//div[@class="esFpML"]')))
+    mobiles_category.click()
+
+    # Apply filters
+    brand_checkbox = WebDriverWait(driver, 10).until(EC.visibility_of_element_located(
+        (By.XPATH, '//div[@class="XqNaEv"]')))
+    brand_checkbox.click()
+    
+    flipkart_assured_filter = WebDriverWait(driver, 10).until(EC.visibility_of_element_located(
+        (By.XPATH, '//div[@class="XqNaEv eJE9fb"]')))
+    flipkart_assured_filter.click()
+
+    # Sort by Price - High to Low
+    price_high_to_low = WebDriverWait(driver, 10).until(EC.visibility_of_element_located(
+        (By.XPATH, '//div[text()="Price -- High to Low"]')))
+    price_high_to_low.click()
+
+    # Extract product details
+    products = []
+    product_elements = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.XPATH, '//div[@class="cPHDOP col-12-12"]')))
+    for product_element in product_elements:
+        try:
+            product_name = WebDriverWait(product_element, 5).until(EC.presence_of_element_located((By.XPATH, './/div[@class="KzDlHZ"]'))).text
+            display_price = WebDriverWait(product_element, 5).until(EC.presence_of_element_located((By.XPATH, './/div[@class="hl05eU"]'))).text
+            product_link = WebDriverWait(product_element, 5).until(EC.presence_of_element_located((By.XPATH, './/a[@class="CGtC98"]'))).get_attribute('href')
+        
+            products.append({
+                'Product Name': product_name.strip(),
+                'Display Price': display_price.strip(),
+                'Link to Product Details Page': product_link
+            })
+        except Exception as e:
+            print("An error occurred:", e)
+
+    # Print the list of products
+    for product in products:
+        print(product)
+
+    # Set the status of test as 'passed'
+    driver.execute_script(
+        'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"passed", "reason": "Test executed successfully"}}')
+
 except NoSuchElementException as err:
-    message = 'Exception: ' + str(err.__class__) + str(err.msg)
+    message = 'Exception: ' + str(err.__class__)
     driver.execute_script(
         'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed", "reason": ' + json.dumps(message) + '}}')
 except Exception as err:
-    message = 'Exception: ' + str(err.__class__) + str(err.msg)
+    message = 'Exception: ' + str(err.__class__)
     driver.execute_script(
         'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed", "reason": ' + json.dumps(message) + '}}')
 finally:
